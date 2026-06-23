@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PURPLE RAINMAKER</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟣</text></svg>">
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d0d1a;
+  --bg2:#111122;
+  --bg3:#161630;
+  --purple:#6c3891;
+  --purple-light:#9b59d0;
+  --purple-dim:#3d1f55;
+  --purple-glow:#6c389180;
+  --cyan:#00d4ff;
+  --green:#00ff41;
+  --red:#ff3366;
+  --yellow:#ffcc00;
+  --text:#e8e8f0;
+  --text-dim:#8888aa;
+  --border:#2a1a3e;
+  --glass:rgba(108,56,145,0.08);
+  --glass2:rgba(108,56,145,0.15);
+}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Courier New',monospace;
+  font-size:13px;
+  position:relative;
+}
+
+/* ── SCANLINES ────────────────────────────────────────────── */
+body::before{
+  content:'';
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* ── MATRIX CANVAS ────────────────────────────────────────── */
+#matrix-canvas{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  opacity:0.12;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── LAYOUT ───────────────────────────────────────────────── */
+#app{
+  position:relative;
+  z-index:1;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* ── HEADER ───────────────────────────────────────────────── */
+#header{
+  background:linear-gradient(90deg,#0d0d1a 0%,#1a0a2e 50%,#0d0d1a 100%);
+  border-bottom:1px solid var(--purple);
+  box-shadow:0 0 20px var(--purple-glow);
+  padding:8px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+#title{
+  font-size:22px;
+  font-weight:bold;
+  letter-spacing:4px;
+  color:var(--purple-light);
+  text-shadow:0 0 10px var(--purple),0 0 20px var(--purple),0 0 40px var(--purple-dim);
+  cursor:default;
+  position:relative;
+}
+#title.glitch::before,#title.glitch::after{
+  content:attr(data-text);
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+}
+#title.glitch::before{
+  color:#ff00ff;
+  animation:glitch-before 0.1s steps(1) forwards;
+  clip:rect(0,900px,10px,0);
+}
+#title.glitch::after{
+  color:#00ffff;
+  animation:glitch-after 0.1s steps(1) forwards;
+  clip:rect(20px,900px,40px,0);
+}
+@keyframes glitch-before{
+  0%{transform:translateX(-3px);}
+  50%{transform:translateX(3px);}
+  100%{transform:translateX(0);}
+}
+@keyframes glitch-after{
+  0%{transform:translateX(3px);}
+  50%{transform:translateX(-3px);}
+  100%{transform:translateX(0);}
+}
+#subtitle{font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:2px;}
+#header-right{display:flex;gap:20px;align-items:center;}
+.header-stat{text-align:right;}
+.header-stat-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;}
+.header-stat-value{font-size:13px;color:var(--purple-light);}
+#net-status{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--text-dim);
+}
+.status-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  animation:pulse-dot 2s infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{opacity:1;}50%{opacity:0.4;}
+}
+
+/* ── MAIN GRID ────────────────────────────────────────────── */
+#main{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  grid-template-rows:auto auto 1fr auto auto;
+  gap:8px;
+  padding:8px;
+  overflow:hidden;
+}
+
+/* ── STAT CARDS ───────────────────────────────────────────── */
+#stats-row{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:8px;
+}
+.stat-card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:10px 14px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color 0.3s,box-shadow 0.3s;
+}
+.stat-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--purple),transparent);
+}
+.stat-card:hover{
+  border-color:var(--purple);
+  box-shadow:0 0 12px var(--purple-glow);
+}
+.stat-label{
+  font-size:9px;text-transform:uppercase;letter-spacing:2px;
+  color:var(--text-dim);margin-bottom:4px;
+}
+.stat-value{
+  font-size:24px;font-weight:bold;
+  color:var(--purple-light);
+  text-shadow:0 0 8px var(--purple);
+  transition:all 0.5s;
+}
+.stat-value.flag-red{color:var(--red);text-shadow:0 0 8px var(--red);}
+.stat-value.flag-green{color:var(--green);text-shadow:0 0 8px var(--green);}
+.stat-sub{font-size:9px;color:var(--text-dim);margin-top:2px;}
+
+/* ── RISK CARD ────────────────────────────────────────────── */
+#risk-card{
+  border-color:var(--border);
+  transition:border-color 0.5s,box-shadow 0.5s;
+}
+#risk-card.risk-low    { border-color:var(--green);  box-shadow:0 0 10px rgba(0,255,65,0.2); }
+#risk-card.risk-medium { border-color:var(--yellow); box-shadow:0 0 10px rgba(255,204,0,0.2); }
+#risk-card.risk-high   { border-color:#ff8c00;       box-shadow:0 0 14px rgba(255,140,0,0.3); }
+#risk-card.risk-critical{
+  border-color:var(--red);
+  animation:risk-pulse 1.5s infinite;
+}
+@keyframes risk-pulse{
+  0%,100%{ box-shadow:0 0 10px rgba(255,51,102,0.3); }
+  50%    { box-shadow:0 0 28px rgba(255,51,102,0.7); }
+}
+#s-risk{
+  font-size:18px !important;
+  font-weight:bold;
+  letter-spacing:2px;
+}
+
+
+#progress-bar-wrap{
+  grid-column:1/-1;
+  display:none;
+  align-items:center;
+  gap:10px;
+  padding:0 2px;
+}
+#progress-bar-wrap.show{display:flex;}
+#progress-label{font-size:10px;color:var(--purple-light);letter-spacing:1px;white-space:nowrap;min-width:120px;}
+#progress-track{
+  flex:1;height:6px;
+  background:var(--bg2);
+  border-radius:3px;
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+#progress-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--purple),var(--purple-light),var(--cyan));
+  border-radius:3px;
+  transition:width 0.8s ease;
+  box-shadow:0 0 8px var(--purple-glow);
+}
+#progress-pct{font-size:10px;color:var(--cyan);min-width:35px;text-align:right;}
+
+/* ── PANEL BASE ───────────────────────────────────────────── */
+.panel{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:4px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  backdrop-filter:blur(4px);
+}
+.panel:hover{border-color:var(--purple-dim);}
+.panel-header{
+  background:var(--glass2);
+  border-bottom:1px solid var(--border);
+  padding:6px 12px;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:2px;
+  color:var(--purple-light);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.panel-header::before{
+  content:'▶';
+  margin-right:6px;
+  font-size:8px;
+  color:var(--purple);
+}
+.panel-body{flex:1;overflow:auto;padding:8px;}
+.panel-body::-webkit-scrollbar{width:4px;}
+.panel-body::-webkit-scrollbar-track{background:var(--bg);}
+.panel-body::-webkit-scrollbar-thumb{background:var(--purple-dim);border-radius:2px;}
+
+/* ── TERMINAL PANEL ───────────────────────────────────────── */
+/* grid position set via inline style on element */
+#terminal-output{
+  background:#000;
+  color:var(--green);
+  font-family:'Courier New',monospace;
+  font-size:11px;
+  padding:10px;
+  height:100%;
+  overflow-y:auto;
+  line-height:1.5;
+}
+#terminal-output::-webkit-scrollbar{width:4px;}
+#terminal-output::-webkit-scrollbar-thumb{background:var(--purple-dim);}
+.term-flag{color:var(--red);}
+.term-success{color:var(--green);}
+.term-info{color:var(--cyan);}
+.term-section{color:var(--purple-light);font-weight:bold;}
+.term-output{color:#aaffaa;}
+.term-prompt{color:var(--purple-light);}
+.term-cursor{
+  display:inline-block;width:8px;height:13px;
+  background:var(--green);
+  animation:blink 1s infinite;
+  vertical-align:middle;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* ── RUN BUTTON ───────────────────────────────────────────── */
+#run-controls{
+  padding:10px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+}
+#btn-run{
+  flex:1;
+  padding:10px;
+  background:linear-gradient(135deg,var(--purple-dim),var(--purple));
+  border:1px solid var(--purple-light);
+  border-radius:4px;
+  color:#fff;
+  font-family:'Courier New',monospace;
+  font-size:13px;
+  font-weight:bold;
+  letter-spacing:3px;
+  cursor:pointer;
+  text-transform:uppercase;
+  transition:all 0.3s;
+  box-shadow:0 0 10px var(--purple-glow);
+  position:relative;
+  overflow:hidden;
+}
+#btn-run::before{
+  content:'';
+  position:absolute;
+  top:-50%;left:-50%;
+  width:200%;height:200%;
+  background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,0.05) 50%,transparent 70%);
+  animation:shimmer 3s infinite;
+}
+@keyframes shimmer{
+  0%{transform:translateX(-100%) translateY(-100%) rotate(45deg);}
+  100%{transform:translateX(100%) translateY(100%) rotate(45deg);}
+}
+#btn-run:hover{
+  background:linear-gradient(135deg,var(--purple),var(--purple-light));
+  box-shadow:0 0 20px var(--purple),0 0 40px var(--purple-glow);
+  transform:translateY(-1px);
+}
+#btn-run:active{transform:translateY(0);}
+#btn-run.scanning{
+  background:linear-gradient(135deg,#3d0011,var(--red));
+  border-color:var(--red);
+  box-shadow:0 0 20px rgba(255,51,102,0.4);
+  animation:scan-pulse 1s infinite;
+  cursor:not-allowed;
+}
+@keyframes scan-pulse{
+  0%,100%{box-shadow:0 0 10px rgba(255,51,102,0.4);}
+  50%{box-shadow:0 0 25px rgba(255,51,102,0.8);}
+}
+#scan-status{font-size:10px;color:var(--text-dim);}
+
+/* ── FLAGS PANEL ──────────────────────────────────────────── */
+#panel-flags{}
+.flag-item{
+  padding:5px 8px;
+  margin-bottom:4px;
+  border-radius:3px;
+  font-size:10px;
+  border-left:3px solid var(--red);
+  background:rgba(255,51,102,0.08);
+  color:#ffaaaa;
+  line-height:1.4;
+}
+.flag-item.flag-tier-critical{
+  border-left:3px solid var(--red);
+  background:rgba(255,51,102,0.12);
+  color:#ffaaaa;
+}
+.flag-item.flag-tier-medium{
+  border-left:3px solid var(--yellow);
+  background:rgba(255,204,0,0.08);
+  color:#ffeeaa;
+}
+.flag-item.flag-tier-info{
+  border-left:3px solid var(--text-dim);
+  background:rgba(136,136,170,0.06);
+  color:var(--text-dim);
+}
+.no-flags{
+  color:var(--green);
+  font-size:11px;
+  text-align:center;
+  padding:20px;
+  text-shadow:0 0 6px var(--green);
+}
+
+/* ── DEVICE TABLE ─────────────────────────────────────────── */
+/* grid position set via inline style on element */
+.device-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.device-table th{
+  color:var(--purple-light);
+  text-align:left;
+  padding:4px 8px;
+  border-bottom:1px solid var(--border);
+  font-size:11px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  position:sticky;top:0;
+  background:var(--bg2);
+}
+.device-table td{
+  padding:3px 8px;
+  border-bottom:1px solid rgba(42,26,62,0.5);
+  color:var(--text);
+}
+.device-table tr:hover td{background:var(--glass2);}
+.device-ip{color:var(--cyan);font-family:'Courier New',monospace;}
+.device-mac{color:var(--text-dim);font-size:11px;}
+.device-vendor{color:var(--text);}
+.device-lookup{
+  font-size:11px;
+  padding:1px 5px;
+  border-radius:2px;
+  border:1px solid var(--purple-dim);
+  color:var(--text-dim);
+  background:transparent;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.device-lookup:hover{border-color:var(--cyan);color:var(--cyan);}
+.device-new{
+  color:var(--red);
+  font-size:11px;
+  font-weight:bold;
+  animation:pulse-dot 1s infinite;
+}
+
+/* ── HEALTH PANEL ─────────────────────────────────────────── */
+#panel-health{}
+.health-metric{margin-bottom:10px;}
+.health-label{
+  display:flex;justify-content:space-between;
+  font-size:10px;color:var(--text-dim);
+  margin-bottom:3px;
+}
+.health-value{color:var(--purple-light);}
+.health-bar{
+  height:4px;background:var(--bg2);
+  border-radius:2px;overflow:hidden;
+}
+.health-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--purple),var(--purple-light));
+  border-radius:2px;
+  transition:width 0.5s ease;
+  box-shadow:0 0 4px var(--purple-glow);
+}
+.health-fill.warn{background:linear-gradient(90deg,#cc6600,var(--yellow));}
+.health-fill.danger{background:linear-gradient(90deg,#660011,var(--red));}
+
+/* ── OPEN PORTS PANEL ─────────────────────────────────────── */
+.port-row{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  padding:3px 0;
+  border-bottom:1px solid rgba(42,26,62,0.4);
+  font-size:9px;
+}
+.port-row:last-child{border-bottom:none;}
+.port-num{
+  font-family:'Courier New',monospace;
+  font-size:9px;
+  font-weight:bold;
+  min-width:52px;
+}
+.port-num.risk-red{color:var(--red);}
+.port-num.risk-yellow{color:var(--yellow);}
+.port-num.risk-cyan{color:var(--cyan);}
+.port-host{color:var(--text-dim);font-size:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.port-svc{color:var(--text);font-size:8px;min-width:50px;}
+
+/* ── REPORT HISTORY ───────────────────────────────────────── */
+#panel-reports{grid-column:1/-1;}
+.report-item{
+  display:flex;align-items:center;
+  padding:5px 8px;
+  margin-bottom:3px;
+  border:1px solid var(--border);
+  border-radius:3px;
+  cursor:pointer;
+  transition:all 0.2s;
+  gap:10px;
+}
+.report-item:hover{
+  border-color:var(--purple);
+  background:var(--glass2);
+}
+.report-name{color:var(--cyan);font-size:11px;flex:1;}
+.report-date{color:var(--text-dim);font-size:9px;}
+.report-flags{
+  font-size:10px;padding:2px 6px;
+  border-radius:2px;
+}
+.report-flags.has-flags{
+  background:rgba(255,51,102,0.2);
+  color:var(--red);
+  border:1px solid var(--red);
+}
+.report-flags.no-flags{
+  background:rgba(0,255,65,0.1);
+  color:var(--green);
+  border:1px solid var(--green);
+}
+.report-actions{display:flex;gap:4px;}
+.btn-sm{
+  padding:2px 8px;
+  border-radius:2px;
+  border:1px solid var(--purple);
+  background:transparent;
+  color:var(--purple-light);
+  font-family:'Courier New',monospace;
+  font-size:9px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-sm:hover{background:var(--purple-dim);color:#fff;}
+.btn-sm.btn-pdf{border-color:var(--cyan);color:var(--cyan);}
+.btn-sm.btn-pdf:hover{background:rgba(0,212,255,0.15);}
+
+/* ── FOOTER ───────────────────────────────────────────────── */
+#footer{
+  grid-column:1/-1;
+  border-top:1px solid var(--border);
+  padding:4px 12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:9px;
+  color:var(--text-dim);
+  flex-shrink:0;
+  background:var(--glass);
+}
+#net-info{color:var(--text-dim);}
+#clock{color:var(--purple-light);font-size:11px;}
+
+/* ── MODAL ────────────────────────────────────────────────── */
+#modal{
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.85);
+  z-index:1000;
+  align-items:center;
+  justify-content:center;
+}
+#modal.show{display:flex;}
+#modal-content{
+  background:var(--bg2);
+  border:1px solid var(--purple);
+  border-radius:6px;
+  width:80vw;max-width:900px;
+  max-height:80vh;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 40px var(--purple-glow);
+}
+#modal-header{
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  color:var(--purple-light);font-size:12px;letter-spacing:2px;
+}
+#modal-body{
+  flex:1;overflow:auto;
+  padding:16px;
+  font-size:11px;
+  white-space:pre-wrap;
+  color:var(--text);
+  line-height:1.6;
+}
+#modal-close{
+  background:none;border:none;
+  color:var(--text-dim);cursor:pointer;
+  font-size:18px;
+}
+#modal-close:hover{color:var(--red);}
+
+/* ── RAIN DROPS ───────────────────────────────────────────── */
+.rain-drop{
+  position:fixed;
+  top:-20px;
+  width:1px;
+  background:linear-gradient(to bottom,transparent,var(--purple),transparent);
+  animation:rain-fall linear infinite;
+  pointer-events:none;
+  z-index:0;
+  opacity:0.3;
+}
+@keyframes rain-fall{
+  to{transform:translateY(100vh);}
+}
+
+/* ── SCROLLBAR GLOBAL ─────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--purple-dim);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <div>
+      <div id="title" data-text="PURPLE RAINMAKER">PURPLE RAINMAKER</div>
+      <div id="subtitle">NETWORK SECURITY AWARENESS PLATFORM // SHAWN C. TOVEY, RCDD</div>
+    </div>
+    <div id="header-right">
+      <div class="header-stat">
+        <div class="header-stat-label">IP Address</div>
+        <div class="header-stat-value" id="h-ip">--</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-label">Subnet</div>
+        <div class="header-stat-value" id="h-subnet">--</div>
+      </div>
+      <div id="net-status" style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;">Interface</div>
+        <select id="iface-select" onchange="setInterface(this.value)" style="
+          background:var(--bg2);border:1px solid var(--purple-dim);
+          color:var(--purple-light);font-family:'Courier New',monospace;
+          font-size:11px;padding:3px 6px;border-radius:3px;cursor:pointer;
+          outline:none;
+        ">
+          <option value="">auto</option>
+        </select>
+      </div>
+      <button onclick="clearDisplay()" style="
+        padding:4px 12px;
+        background:transparent;
+        border:1px solid var(--text-dim);
+        border-radius:3px;
+        color:var(--text-dim);
+        font-family:'Courier New',monospace;
+        font-size:10px;
+        letter-spacing:1px;
+        cursor:pointer;
+        transition:all 0.2s;
+      " onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+         onmouseout="this.style.borderColor='var(--text-dim)';this.style.color='var(--text-dim)'">
+        ✕ CLEAR
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div id="main">
+
+    <!-- STAT CARDS -->
+    <div id="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Live Devices</div>
+        <div class="stat-value" id="s-devices">--</div>
+        <div class="stat-sub"><span id="d-devices" style="font-size:10px;"></span><span id="s-devices-sub"> last scan</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Ports</div>
+        <div class="stat-value" id="s-ports">--</div>
+        <div class="stat-sub"><span id="d-ports" style="font-size:10px;"></span><span> last scan</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">CVEs Found</div>
+        <div class="stat-value" id="s-cves">--</div>
+        <div class="stat-sub"><span id="d-cves" style="font-size:10px;"></span><span> last scan</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Flags</div>
+        <div class="stat-value" id="s-flags">--</div>
+        <div class="stat-sub"><span id="d-flags" style="font-size:10px;"></span><span> last scan</span></div>
+      </div>
+      <div class="stat-card" id="risk-card">
+        <div class="stat-label">Risk Level</div>
+        <div class="stat-value" id="s-risk">--</div>
+        <div class="stat-sub" id="s-risk-sub" style="font-size:9px;color:var(--text-dim);">no scan data</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">CPU</div>
+        <div class="stat-value" id="s-cpu">--%</div>
+        <div class="stat-sub">live</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Memory</div>
+        <div class="stat-value" id="s-mem">--%</div>
+        <div class="stat-sub">live</div>
+      </div>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div id="progress-bar-wrap">
+      <div id="progress-label">STEP 1 OF 3</div>
+      <div id="progress-track"><div id="progress-fill"></div></div>
+      <div id="progress-pct">0%</div>
+    </div>
+
+    <!-- TERMINAL — row 3, col 1-2 (50%) -->
+    <div class="panel" id="panel-terminal" style="grid-column:1/2;grid-row:3/4;">
+      <div class="panel-header">
+        Live Terminal Output
+        <span id="scan-step" style="color:var(--text-dim);font-size:9px;letter-spacing:1px;"></span>
+      </div>
+      <div id="terminal-output">
+        <span class="term-prompt">purple-rainmaker@kaldel:~$ </span><span class="term-cursor"></span>
+        <br><span class="term-info">[*] PURPLE RAINMAKER ready. Press INITIATE SCAN to begin.</span>
+      </div>
+      <div id="run-controls">
+        <button id="btn-run" onclick="startScan()">⚡ INITIATE SCAN</button>
+        <div id="scan-status">STANDBY</div>
+      </div>
+    </div>
+
+    <!-- DEVICE INVENTORY — row 3, col 2-4 (50%) -->
+    <div class="panel" id="panel-devices" style="grid-column:2/4;grid-row:3/4;">
+      <div class="panel-header">
+        Device Inventory
+        <span id="device-count" style="color:var(--text-dim);font-size:9px;"></span>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <table class="device-table">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Hostname</th>
+              <th>MAC Address</th>
+              <th>Vendor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="device-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SYSTEM HEALTH — row 4, col 1 -->
+    <div class="panel" id="panel-health" style="grid-column:1/2;grid-row:4/5;max-height:155px;">
+      <div class="panel-header">System Health</div>
+      <div class="panel-body">
+        <div class="health-metric">
+          <div class="health-label"><span>CPU</span><span class="health-value" id="h-cpu">--%</span></div>
+          <div class="health-bar"><div class="health-fill" id="hb-cpu" style="width:0%"></div></div>
+        </div>
+        <div class="health-metric">
+          <div class="health-label"><span>Memory</span><span class="health-value" id="h-mem">--%</span></div>
+          <div class="health-bar"><div class="health-fill" id="hb-mem" style="width:0%"></div></div>
+        </div>
+        <div class="health-metric">
+          <div class="health-label"><span>Disk</span><span class="health-value" id="h-disk">--%</span></div>
+          <div class="health-bar"><div class="health-fill" id="hb-disk" style="width:0%"></div></div>
+        </div>
+        <div style="margin-top:6px;font-size:9px;color:var(--text-dim);display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+          <div>Uptime: <span id="h-uptime" style="color:var(--purple-light);">--</span></div>
+          <div>TX: <span id="h-tx" style="color:var(--purple-light);">--</span></div>
+          <div>Disk Free: <span id="h-df" style="color:var(--purple-light);">--</span></div>
+          <div>RX: <span id="h-rx" style="color:var(--purple-light);">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLAGS & ALERTS — row 4, col 2 -->
+    <div class="panel" id="panel-flags" style="grid-column:2/3;grid-row:4/5;max-height:155px;">
+      <div class="panel-header">
+        Flags &amp; Alerts
+        <span id="flag-count" style="color:var(--red);">0</span>
+      </div>
+      <div class="panel-body" id="flags-body">
+        <div class="no-flags">◉ ALL CLEAR</div>
+      </div>
+    </div>
+
+    <!-- OPEN PORTS — row 4, col 3 -->
+    <div class="panel" id="panel-ports" style="grid-column:3/4;grid-row:4/5;max-height:155px;">
+      <div class="panel-header">
+        Open Ports
+        <span id="ports-count" style="color:var(--text-dim);font-size:9px;"></span>
+      </div>
+      <div class="panel-body" id="ports-body">
+        <div style="color:var(--text-dim);font-size:10px;text-align:center;padding:20px;">No scan data yet.</div>
+      </div>
+    </div>
+
+    <!-- REPORT HISTORY — row 5 -->
+    <div class="panel" id="panel-reports" style="grid-column:1/-1;grid-row:5/6;max-height:120px;">
+      <div class="panel-header">
+        Report History
+        <span id="report-count" style="color:var(--text-dim);font-size:9px;"></span>
+      </div>
+      <div class="panel-body" id="reports-body" style="padding:4px 8px;">
+        <div style="color:var(--text-dim);font-size:10px;text-align:center;padding:10px;">No reports yet. Run a scan to generate the first report.</div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div id="footer" style="grid-column:1/-1;">
+      <div id="net-info">--</div>
+      <div>PURPLE RAINMAKER // © 2026 SHAWN C. TOVEY, RCDD // LOCAL ONLY</div>
+      <div id="clock">--:--:--</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div id="modal-content">
+    <div id="modal-header">
+      <span id="modal-title">REPORT</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-sm btn-pdf" id="modal-gen-btn" onclick="generateReport()">GEN PDF</button>
+        <button id="modal-close" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── MATRIX RAIN ──────────────────────────────────────────────
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF♦▸◆░▒▓';
+const fontSize = 14;
+const cols = Math.floor(canvas.width / fontSize);
+const drops = Array(cols).fill(1);
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(13,13,26,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < drops.length; i++) {
+    const char = chars[Math.floor(Math.random() * chars.length)];
+    const r = Math.random();
+    if (r < 0.1) ctx.fillStyle = '#ffffff';
+    else if (r < 0.3) ctx.fillStyle = '#9b59d0';
+    else if (r < 0.6) ctx.fillStyle = '#6c3891';
+    else ctx.fillStyle = '#3d1f55';
+    ctx.font = fontSize + 'px monospace';
+    ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 50);
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// ── RAIN DROPS ───────────────────────────────────────────────
+function createRainDrop() {
+  const drop = document.createElement('div');
+  drop.className = 'rain-drop';
+  drop.style.left = Math.random() * 100 + 'vw';
+  drop.style.height = (Math.random() * 80 + 20) + 'px';
+  drop.style.animationDuration = (Math.random() * 2 + 1) + 's';
+  drop.style.animationDelay = Math.random() * 3 + 's';
+  document.body.appendChild(drop);
+  setTimeout(() => drop.remove(), 5000);
+}
+setInterval(createRainDrop, 200);
+
+// ── GLITCH TITLE ─────────────────────────────────────────────
+const titleEl = document.getElementById('title');
+function triggerGlitch() {
+  titleEl.classList.add('glitch');
+  setTimeout(() => titleEl.classList.remove('glitch'), 150);
+}
+setInterval(triggerGlitch, Math.random() * 5000 + 3000);
+
+// ── CLOCK ────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── STATE ────────────────────────────────────────────────────
+let scanning = false;
+let currentReport = null;
+let currentPortHost = '';
+let displayCleared = true;   // Start clean — stat cards only populate after a scan
+let ws = null;
+const macCache = {};
+const knownDevices = new Set();
+
+// ── PROGRESS BAR ─────────────────────────────────────────────
+const STEP_MAP = {
+  '1': { label: 'STEP 1 OF 3 — DEVICE DISCOVERY', pct: 10 },
+  '2': { label: 'STEP 2 OF 3 — PORT SCAN', pct: 40 },
+  '3': { label: 'STEP 3 OF 3 — VULNERABILITY SCAN', pct: 70 },
+};
+
+function setProgress(stepNum, pct, label) {
+  const wrap = document.getElementById('progress-bar-wrap');
+  wrap.classList.add('show');
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  if (label) document.getElementById('progress-label').textContent = label;
+}
+
+function completeProgress() {
+  setProgress(3, 100, 'COMPLETE');
+  setTimeout(() => {
+    document.getElementById('progress-bar-wrap').classList.remove('show');
+  }, 3000);
+}
+
+// ── MAC LOOKUP (macvendors.com local fallback) ────────────────
+async function lookupMAC(mac) {
+  if (!mac || mac === 'Unknown') return 'Unknown';
+  const key = mac.substring(0, 8).toUpperCase();
+  if (macCache[key]) return macCache[key];
+
+  try {
+    const r = await fetch(`https://api.macvendors.com/${encodeURIComponent(mac)}`);
+    if (r.ok) {
+      const vendor = await r.text();
+      macCache[key] = vendor.trim();
+      return vendor.trim();
+    }
+  } catch(e) {}
+
+  // Fallback: common OUI prefixes
+  const oui = mac.replace(/[:\-]/g,'').substring(0,6).toUpperCase();
+  const fallbacks = {
+    '8CED E1': 'Ubiquiti', '88DA36': 'Calix', '04421A': 'ASUSTek',
+    '306893': 'TP-Link', '3068E4': 'TP-Link', '28E6A9': 'Samsung',
+    '50FDD5': 'Samsung', '2010B1': 'Amazon', 'B08BA8': 'Amazon',
+    '4089C6': 'Amazon', 'D4BEDC': 'Roku', 'E42AAC': 'Microsoft',
+    'AC9FC3': 'Ring', '40D160': 'Apple', 'D88B4C': 'YoLink',
+    '1418C3': 'Intel', 'AC3DCB': 'Intel', 'F227 67': 'Apple (randomized)',
+    '44876 3': 'FN-Link', '3C3178': 'Qolsys', '286BB4': 'Samsung',
+    'A457A0': 'Samsung', 'F4DD06': 'Samsung', 'E0F728': 'Amazon',
+    'EC A138': 'Amazon', 'B05CDA': 'HP',
+  };
+  const match = Object.keys(fallbacks).find(k => oui.startsWith(k.replace(/\s/g,'')));
+  const result = match ? fallbacks[match] : '—';
+  macCache[key] = result;
+  return result;
+}
+
+// ── INTERFACE SELECTOR ───────────────────────────────────────
+async function loadInterfaces() {
+  try {
+    const r = await fetch('/api/interfaces');
+    const d = await r.json();
+    const sel = document.getElementById('iface-select');
+    sel.innerHTML = '<option value="">auto</option>';
+    d.interfaces.forEach(iface => {
+      const opt = document.createElement('option');
+      opt.value = iface.name;
+      opt.textContent = `${iface.name} (${iface.ip})`;
+      // Select preferred if set, otherwise select first available interface
+      if (d.preferred ? iface.name === d.preferred : d.interfaces.indexOf(iface) === 0) {
+        opt.selected = true;
+      }
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+async function setInterface(iface) {
+  try {
+    await fetch('/api/interface', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({interface: iface})
+    });
+    // Refresh header stats
+    pollStatus();
+  } catch(e) {}
+}
+
+// ── GEN PDF FROM HISTORY ROW ─────────────────────────────────
+async function genPDFFromHistory(name, btn) {
+  btn.textContent = 'GENERATING...';
+  btn.disabled = true;
+  try {
+    await fetch(`/api/report/${name}/generate`, {method:'POST'});
+    // Poll until ready
+    let attempts = 0;
+    const poller = setInterval(async () => {
+      attempts++;
+      if (attempts > 45) { clearInterval(poller); btn.textContent = 'GEN PDF'; btn.disabled = false; return; }
+      try {
+        const r = await fetch('/api/reports');
+        const reports = await r.json();
+        const match = reports.find(rep => rep.name === name);
+        if (match && match.has_pdf) {
+          clearInterval(poller);
+          loadReports();
+        }
+      } catch(e) { clearInterval(poller); }
+    }, 2000);
+  } catch(e) {
+    btn.textContent = 'GEN PDF';
+    btn.disabled = false;
+  }
+}
+
+
+function animateCounter(el, target, suffix='') {
+  const start = parseInt(el.textContent) || 0;
+  const diff = target - start;
+  const steps = 20;
+  let step = 0;
+  const timer = setInterval(() => {
+    step++;
+    el.textContent = Math.round(start + (diff * step/steps)) + suffix;
+    if (step >= steps) clearInterval(timer);
+  }, 30);
+}
+
+// ── HEALTH BARS ──────────────────────────────────────────────
+function setBar(barId, pct) {
+  const bar = document.getElementById(barId);
+  bar.style.width = pct + '%';
+  bar.className = 'health-fill';
+  if (pct > 85) bar.classList.add('danger');
+  else if (pct > 65) bar.classList.add('warn');
+}
+
+// ── RISK DISPLAY ─────────────────────────────────────────────
+function updateRisk(risk) {
+  if (!risk || !risk.level) return;
+  const el    = document.getElementById('s-risk');
+  const sub   = document.getElementById('s-risk-sub');
+  const card  = document.getElementById('risk-card');
+  const level = risk.level;
+  const colors = {
+    LOW:      'var(--green)',
+    MEDIUM:   'var(--yellow)',
+    HIGH:     '#ff8c00',
+    CRITICAL: 'var(--red)',
+  };
+  el.textContent  = level;
+  el.style.color  = colors[level] || 'var(--text)';
+  el.style.textShadow = `0 0 8px ${colors[level]}`;
+  sub.textContent = risk.description || '';
+  card.className  = `stat-card risk-${level.toLowerCase()}`;
+}
+
+// ── DELTA DISPLAY ─────────────────────────────────────────────
+function updateDelta(id, val) {
+  const el = document.getElementById(id);
+  if (!el || val === undefined || val === null) return;
+  if (val === 0) { el.textContent = ''; return; }
+  const sign  = val > 0 ? '+' : '';
+  const color = val > 0 ? 'var(--red)' : 'var(--green)';
+  el.textContent  = `${sign}${val}`;
+  el.style.color  = color;
+}
+
+
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+
+    document.getElementById('h-ip').textContent = d.network.ip || '--';
+    document.getElementById('h-subnet').textContent = d.network.subnet || '--';
+    document.getElementById('net-info').textContent =
+      `${d.network.interface} // ${d.network.ip} // GW: ${d.network.gateway} // Subnet: ${d.network.subnet}`;
+
+    // CPU/Memory always update regardless of clear state
+    document.getElementById('s-cpu').textContent = d.health.cpu_percent + '%';
+    document.getElementById('s-mem').textContent = d.health.mem_percent + '%';
+
+    // Don't repopulate scan stat cards if user cleared the display
+    if (!displayCleared) {
+      const fCount = d.last_flags ? d.last_flags.length : 0;
+      animateCounter(document.getElementById('s-devices'), d.last_device_count || 0);
+      animateCounter(document.getElementById('s-ports'),   d.last_port_count   || 0);
+      animateCounter(document.getElementById('s-cves'),    d.last_cve_count    || 0);
+      const flagEl = document.getElementById('s-flags');
+      animateCounter(flagEl, fCount);
+      flagEl.className = 'stat-value' + (fCount > 0 ? ' flag-red' : ' flag-green');
+      if (d.risk) updateRisk(d.risk);
+      if (d.diff) {
+        updateDelta('d-devices', d.diff.devices);
+        updateDelta('d-ports',   d.diff.ports);
+        updateDelta('d-cves',    d.diff.cves);
+        updateDelta('d-flags',   d.diff.flags);
+      }
+    }
+
+    loadReports();
+  } catch(e) { console.error('Status poll failed:', e); }
+}
+
+// ── HEALTH WS ────────────────────────────────────────────────
+function connectHealthWS() {
+  const hwsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const hws = new WebSocket(`${hwsProto}//${location.host}/ws/health`);
+  hws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('h-cpu').textContent = d.cpu_percent + '%';
+    document.getElementById('h-mem').textContent = d.mem_percent + '%';
+    document.getElementById('h-disk').textContent = d.disk_percent + '%';
+    document.getElementById('h-uptime').textContent = d.uptime;
+    document.getElementById('h-df').textContent = d.disk_free_gb + ' GB';
+    document.getElementById('h-tx').textContent = d.net_sent_mb + ' MB';
+    document.getElementById('h-rx').textContent = d.net_recv_mb + ' MB';
+    document.getElementById('s-cpu').textContent = d.cpu_percent + '%';
+    document.getElementById('s-mem').textContent = d.mem_percent + '%';
+    setBar('hb-cpu', d.cpu_percent);
+    setBar('hb-mem', d.mem_percent);
+    setBar('hb-disk', d.disk_percent);
+  };
+  hws.onclose = () => setTimeout(connectHealthWS, 3000);
+}
+
+// ── FLAGS RENDER ─────────────────────────────────────────────
+const CRITICAL_FLAG_PATTERNS = [/3389/,/RDP/i,/VNC/i,/telnet/i,/port 23/i,/port 4444/i,/port 6667/i,/rexec/i,/rlogin/i];
+const MEDIUM_FLAG_PATTERNS   = [/UNUSUAL PORT/i,/NEW DEVICE/i,/CVE/i,/1080/,/5900/,/offline/i];
+
+function flagTier(text) {
+  if (CRITICAL_FLAG_PATTERNS.some(p => p.test(text))) return 'critical';
+  if (MEDIUM_FLAG_PATTERNS.some(p => p.test(text)))   return 'medium';
+  return 'info';
+}
+
+function renderFlags(flags) {
+  const body = document.getElementById('flags-body');
+  document.getElementById('flag-count').textContent = flags.length;
+  if (!flags.length) {
+    body.innerHTML = '<div class="no-flags">◉ ALL CLEAR</div>';
+    return;
+  }
+  body.innerHTML = flags.map(f => {
+    const txt  = f.replace('[!]','').trim();
+    const tier = flagTier(txt);
+    return `<div class="flag-item flag-tier-${tier}">${txt}</div>`;
+  }).join('');
+}
+
+// ── PORTS RENDER ─────────────────────────────────────────────
+const RED_PORTS   = new Set([21,22,23,25,69,135,1080,3389,4444,5900,6667,8888]);
+const YELLOW_PORTS = new Set([80,443,8080,8443,3000,3001,5000,8086]);
+
+function portRiskClass(port) {
+  const n = parseInt(port);
+  if (RED_PORTS.has(n))    return 'risk-red';
+  if (YELLOW_PORTS.has(n)) return 'risk-yellow';
+  return 'risk-cyan';
+}
+
+function renderPorts(ports) {
+  const body = document.getElementById('ports-body');
+  document.getElementById('ports-count').textContent = ports.length + ' ports';
+  if (!ports.length) {
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;padding:20px;">No open ports found.</div>';
+    return;
+  }
+  body.innerHTML = ports.map(p => {
+    const risk = portRiskClass(p.port);
+    // Shorten host — prefer just IP or short hostname
+    const host = p.host.replace(/\s*\(.*?\)/, '').trim();
+    return `<div class="port-row">
+      <span class="port-num ${risk}">${p.port}/tcp</span>
+      <span class="port-svc">${p.service}</span>
+      <span class="port-host">${host}</span>
+    </div>`;
+  }).join('');
+}
+
+
+async function renderDevices(devices, liveMode=false) {
+  const tbody = document.getElementById('device-tbody');
+  document.getElementById('device-count').textContent = devices.length + ' devices';
+
+  // Render immediately with ARP vendor, then enrich with MAC lookup
+  tbody.innerHTML = devices.map((d, i) => `
+    <tr id="dev-row-${i}">
+      <td class="device-ip">${d.ip}</td>
+      <td style="color:var(--text-dim);font-size:10px;">${d.hostname || '–'}</td>
+      <td class="device-mac">${d.mac}</td>
+      <td id="vendor-${i}" class="device-vendor">${d.vendor && d.vendor !== '(Unknown)' ? d.vendor : '<span style="color:var(--text-dim);">looking up...</span>'}</td>
+      <td id="dev-status-${i}">${
+        d.cve_count > 0
+          ? `<span style="color:var(--red);font-size:10px;font-weight:bold;">⚑ ${d.cve_count} CVE</span>`
+          : d.flagged
+            ? `<span style="color:var(--yellow);font-size:10px;">⚑ FLAG</span>`
+            : liveMode
+              ? '<span class="device-new">● LIVE</span>'
+              : '<span style="color:var(--green);font-size:10px;">● OK</span>'
+      }</td>
+    </tr>
+  `).join('');
+
+  // Async MAC lookups — only enrich if ARP vendor was unknown
+  devices.forEach(async (d, i) => {
+    const cell = document.getElementById(`vendor-${i}`);
+    if (!cell) return;
+    const arpKnown = d.vendor && d.vendor !== '(Unknown)' && !d.vendor.startsWith('(Unknown');
+    if (!arpKnown) {
+      const vendor = await lookupMAC(d.mac);
+      if (cell && vendor && vendor !== '—') {
+        cell.textContent = vendor;
+        cell.style.color = 'var(--cyan)';
+      } else if (cell) {
+        cell.textContent = d.vendor || '–';
+        cell.style.color = 'var(--text-dim)';
+      }
+    }
+  });
+}
+
+// ── ADD DEVICE LIVE (during scan) ────────────────────────────
+async function addDeviceLive(ip, mac, vendor) {
+  // Deduplicate by IP using knownDevices Set
+  if (knownDevices.has(ip)) return;
+  knownDevices.add(ip);
+
+  const tbody = document.getElementById('device-tbody');
+  const i = tbody.rows.length;
+  const row = document.createElement('tr');
+  row.id = `dev-row-live-${i}`;
+  // Show ARP vendor immediately; async lookup will update if unknown
+  const arpKnown = vendor && vendor !== '(Unknown)' && !vendor.startsWith('(Unknown');
+  row.innerHTML = `
+    <td class="device-ip">${ip}</td>
+    <td style="color:var(--text-dim);">–</td>
+    <td class="device-mac">${mac}</td>
+    <td id="vendor-live-${i}" class="device-vendor" style="${arpKnown ? '' : 'color:var(--text-dim);'}">${arpKnown ? vendor : 'looking up...'}</td>
+    <td><span class="device-new">● LIVE</span></td>
+  `;
+  tbody.appendChild(row);
+
+  const count = tbody.rows.length;
+  document.getElementById('device-count').textContent = count + ' devices';
+
+  // Async MAC lookup — only if ARP vendor was unknown
+  if (!arpKnown) {
+    const cell = document.getElementById(`vendor-live-${i}`);
+    if (cell && mac) {
+      const v = await lookupMAC(mac);
+      if (cell) {
+        if (v && v !== '—') {
+          cell.textContent = v;
+          cell.style.color = 'var(--cyan)';
+        } else {
+          cell.textContent = vendor || '–';
+          cell.style.color = 'var(--text-dim)';
+        }
+      }
+    }
+  }
+}
+
+// ── REPORTS ──────────────────────────────────────────────────
+async function loadReports(populatePanels = false) {
+  try {
+    const r = await fetch('/api/reports');
+    const reports = await r.json();
+
+    document.getElementById('report-count').textContent = reports.length + ' scans';
+
+    const body = document.getElementById('reports-body');
+    if (!reports.length) {
+      body.innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;padding:10px;">No reports yet. Run a scan to generate the first report.</div>';
+      return;
+    }
+
+    body.innerHTML = reports.map(rep => {
+      const flagClass = rep.flag_count > 0 ? 'has-flags' : 'no-flags';
+      const flagText  = rep.flag_count > 0 ? `⚑ ${rep.flag_count} FLAGS` : '✓ CLEAR';
+      const pdfBtn    = rep.has_pdf
+        ? `<button class="btn-sm btn-pdf" onclick="window.open('/api/report/${rep.name}/download/pdf')">PDF</button>`
+        : scanning ? '' : `<button class="btn-sm" onclick="genPDFFromHistory('${rep.name}', this)">GEN PDF</button>`;
+      return `
+        <div class="report-item" onclick="viewReport('${rep.name}')">
+          <span class="report-name">${rep.name}</span>
+          <span class="report-flags ${flagClass}">${flagText}</span>
+          <div class="report-actions" onclick="event.stopPropagation()">
+            <button class="btn-sm" onclick="viewReport('${rep.name}')">VIEW</button>
+            ${pdfBtn}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Only populate panels when explicitly requested (after scan or user action)
+    if (populatePanels && reports.length > 0 && !scanning) {
+      const dr = await fetch(`/api/report/${reports[0].name}`);
+      const data = await dr.json();
+      renderDevices(data.devices || []);
+      renderFlags(data.flags || []);
+      renderPorts(data.open_ports || []);
+      animateCounter(document.getElementById('s-devices'), (data.devices || []).length);
+      animateCounter(document.getElementById('s-ports'), (data.open_ports || []).length);
+      animateCounter(document.getElementById('s-cves'), (data.cves || []).length);
+      const fCount = (data.flags || []).length;
+      const flagEl = document.getElementById('s-flags');
+      animateCounter(flagEl, fCount);
+      flagEl.className = 'stat-value' + (fCount > 0 ? ' flag-red' : ' flag-green');
+    }
+  } catch(e) { console.error('Load reports failed:', e); }
+}
+
+// ── SCAN ─────────────────────────────────────────────────────
+function startScan() {
+  if (scanning) return;
+  scanning = true;
+  displayCleared = false;  // Allow stat cards to update again
+
+  const btn = document.getElementById('btn-run');
+  btn.textContent = '⛔ SCANNING...';
+  btn.classList.add('scanning');
+  document.getElementById('scan-status').textContent = 'RUNNING';
+
+  // Clear device table for live population
+  document.getElementById('device-tbody').innerHTML = '';
+  document.getElementById('device-count').textContent = '0 devices';
+  knownDevices.clear();
+  currentPortHost = '';
+  // Clear ports panel
+  document.getElementById('ports-body').innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;padding:20px;">Waiting for port scan...</div>';
+  document.getElementById('ports-count').textContent = '';
+
+  // Show progress bar
+  setProgress(1, 5, 'STEP 1 OF 3 — DEVICE DISCOVERY');
+
+  const term = document.getElementById('terminal-output');
+  term.innerHTML = `<span class="term-prompt">purple-rainmaker@kaldel:~$ </span>sudo bash autopilot.sh\n`;
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/scan`);
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+
+    // Filter DUP: lines from terminal display
+    if (msg.msg && msg.msg.includes('(DUP:')) return;
+
+    const line = document.createElement('div');
+
+    if (msg.type === 'flag') line.className = 'term-flag';
+    else if (msg.type === 'success') line.className = 'term-success';
+    else if (msg.type === 'info') line.className = 'term-info';
+    else if (msg.type === 'section') line.className = 'term-section';
+    else line.className = 'term-output';
+
+    line.textContent = msg.msg;
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+
+    // Progress bar updates
+    if (msg.msg && msg.msg.includes('STEP 1')) setProgress(1, 10, 'STEP 1 OF 3 — DEVICE DISCOVERY');
+    if (msg.msg && msg.msg.includes('STEP 2')) setProgress(2, 40, 'STEP 2 OF 3 — PORT SCAN');
+    if (msg.msg && msg.msg.includes('STEP 3')) setProgress(3, 70, 'STEP 3 OF 3 — VULNERABILITY SCAN');
+    if (msg.msg && msg.msg.includes('Live hosts:')) {
+      const m = msg.msg.match(/Live hosts:\s*(\d+)/);
+      if (m) animateCounter(document.getElementById('s-devices'), parseInt(m[1]));
+      setProgress(1, 35, 'STEP 1 OF 3 — DEVICE DISCOVERY');
+    }
+    if (msg.msg && msg.msg.includes('Port scan complete')) setProgress(2, 68, 'STEP 2 OF 3 — PORT SCAN');
+    if (msg.msg && msg.msg.includes('Vuln scan complete')) setProgress(3, 95, 'STEP 3 OF 3 — VULNERABILITY SCAN');
+
+    // Live device population from ARP output — generic IP, handle tabs
+    if (msg.msg) {
+      const cleaned = msg.msg.replace(/\t/g, ' ').trim();
+      const arpMatch = cleaned.match(/^(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f]{2}(?::[0-9a-f]{2}){5})\s+(.*)/i);
+      if (arpMatch) {
+        addDeviceLive(arpMatch[1], arpMatch[2], arpMatch[3].trim());
+      }
+    }
+
+    // Live flag population
+    if (msg.type === 'flag') {
+      const body = document.getElementById('flags-body');
+      if (body.querySelector('.no-flags')) body.innerHTML = '';
+      const txt  = msg.msg.replace('[!]','').trim();
+      const tier = flagTier(txt);
+      const item = document.createElement('div');
+      item.className = `flag-item flag-tier-${tier}`;
+      item.textContent = txt;
+      body.appendChild(item);
+      const count = body.querySelectorAll('.flag-item').length;
+      document.getElementById('flag-count').textContent = count;
+      const flagEl = document.getElementById('s-flags');
+      flagEl.textContent = count;
+      flagEl.className = 'stat-value flag-red';
+    }
+
+    // Live port population from nmap output during Step 2
+    if (msg.msg) {
+      const portMatch = msg.msg.match(/^(\d+)\/tcp\s+open\s+(\S+)\s*(.*)/);
+      if (portMatch && currentPortHost) {
+        const port = portMatch[1];
+        const svc  = portMatch[2];
+        const body = document.getElementById('ports-body');
+        if (body.querySelector('div[style]')) body.innerHTML = ''; // clear placeholder
+        const risk = portRiskClass(port);
+        const row = document.createElement('div');
+        row.className = 'port-row';
+        row.innerHTML = `<span class="port-num ${risk}">${port}/tcp</span><span class="port-svc">${svc}</span><span class="port-host">${currentPortHost}</span>`;
+        body.appendChild(row);
+        const count = body.querySelectorAll('.port-row').length;
+        document.getElementById('ports-count').textContent = count + ' ports';
+        animateCounter(document.getElementById('s-ports'), count);
+      }
+      // Track current host for port attribution
+      const hostMatch = msg.msg.match(/Nmap scan report for (.+)/);
+      if (hostMatch) {
+        currentPortHost = hostMatch[1].replace(/\s*\(.*?\)/, '').trim();
+      }
+    }
+
+
+
+    if (msg.msg) {
+      document.getElementById('scan-step').textContent = msg.msg.replace(/[═]/g,'').trim().substring(0,40);
+    }
+
+    if (msg.type === 'complete') scanComplete(msg.report_dir);
+    if (msg.type === 'error') {
+      scanning = false;
+      btn.textContent = '⚡ INITIATE SCAN';
+      btn.classList.remove('scanning');
+      document.getElementById('scan-status').textContent = 'ERROR';
+    }
+  };
+
+  ws.onerror = () => {
+    scanning = false;
+    btn.textContent = '⚡ INITIATE SCAN';
+    btn.classList.remove('scanning');
+    document.getElementById('scan-status').textContent = 'CONNECTION ERROR';
+  };
+}
+
+function scanComplete(reportDir) {
+  scanning = false;
+  completeProgress();
+  const btn = document.getElementById('btn-run');
+  btn.textContent = '⚡ INITIATE SCAN';
+  btn.classList.remove('scanning');
+  document.getElementById('scan-status').textContent = 'COMPLETE — ' + (reportDir || '');
+  document.getElementById('scan-step').textContent = '';
+  currentReport = reportDir;
+  pollStatus();
+  loadReports(true);
+
+  // Auto-open PDF modal once PDF is ready
+  if (reportDir) {
+    let pdfPollCount = 0;
+    const pdfPoller = setInterval(async () => {
+      pdfPollCount++;
+      if (pdfPollCount > 30) { clearInterval(pdfPoller); return; } // 60s timeout
+      try {
+        const r = await fetch('/api/reports');
+        const reports = await r.json();
+        const match = reports.find(rep => rep.name === reportDir);
+        if (match && match.has_pdf) {
+          clearInterval(pdfPoller);
+          // Open PDF directly in new tab
+          window.open(`/api/report/${reportDir}/download/pdf`);
+        }
+      } catch(e) { clearInterval(pdfPoller); }
+    }, 2000);
+  }
+}
+
+// ── CLEAR DISPLAY ────────────────────────────────────────────
+function clearDisplay() {
+  // Terminal
+  document.getElementById('terminal-output').innerHTML =
+    '<span class="term-prompt">purple-rainmaker@kaldel:~$ </span><span class="term-cursor"></span>' +
+    '<br><span class="term-info">[*] PURPLE RAINMAKER ready. Press INITIATE SCAN to begin.</span>';
+
+  // Device table
+  document.getElementById('device-tbody').innerHTML = '';
+  document.getElementById('device-count').textContent = '';
+  knownDevices.clear();
+
+  // Flags panel
+  document.getElementById('flags-body').innerHTML = '<div class="no-flags">◉ ALL CLEAR</div>';
+  document.getElementById('flag-count').textContent = '0';
+
+  // Stat cards — all reset to --
+  ['s-devices','s-ports','s-cves'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '--';
+    el.className = 'stat-value';
+  });
+  const flagEl = document.getElementById('s-flags');
+  flagEl.textContent = '--';
+  flagEl.className = 'stat-value';
+
+  // Delta spans
+  ['d-devices','d-ports','d-cves','d-flags'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+
+  // Risk card
+  const riskEl = document.getElementById('s-risk');
+  const riskSub = document.getElementById('s-risk-sub');
+  const riskCard = document.getElementById('risk-card');
+  riskEl.textContent = '--';
+  riskEl.style.color = '';
+  riskEl.style.textShadow = '';
+  riskSub.textContent = 'no scan data';
+  riskCard.className = 'stat-card';
+
+  // Progress bar
+  document.getElementById('progress-bar-wrap').classList.remove('show');
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-pct').textContent = '0%';
+
+  // Ports panel
+  document.getElementById('ports-body').innerHTML = '<div style="color:var(--text-dim);font-size:10px;text-align:center;padding:20px;">No scan data yet.</div>';
+  document.getElementById('ports-count').textContent = '';
+  currentPortHost = '';
+
+  // Scan status
+  document.getElementById('scan-status').textContent = 'STANDBY';
+  document.getElementById('scan-step').textContent = '';
+
+  // Suppress next pollStatus from repopulating stat cards
+  displayCleared = true;
+}
+
+
+async function viewReport(name) {
+  currentReport = name;
+  document.getElementById('modal-title').textContent = 'REPORT // ' + name;
+  document.getElementById('modal-body').textContent = 'Loading...';
+  document.getElementById('modal').classList.add('show');
+  try {
+    const r = await fetch(`/api/report/${name}/summary`);
+    const d = await r.json();
+    document.getElementById('modal-body').textContent = d.summary || 'No summary available.';
+  } catch(e) {
+    document.getElementById('modal-body').textContent = 'Error loading report.';
+  }
+}
+
+async function genPDF(name) {
+  try {
+    await fetch(`/api/report/${name}/generate`, {method:'POST'});
+  } catch(e) {}
+}
+
+async function generateReport() {
+  if (!currentReport) return;
+  const btn = document.getElementById('modal-gen-btn');
+  btn.textContent = 'GENERATING...';
+  try {
+    await fetch(`/api/report/${currentReport}/generate`, {method:'POST'});
+    // Poll until PDF ready
+    let attempts = 0;
+    const poller = setInterval(async () => {
+      attempts++;
+      if (attempts > 30) { clearInterval(poller); btn.textContent = 'GEN PDF'; return; }
+      try {
+        const r = await fetch('/api/reports');
+        const reports = await r.json();
+        const match = reports.find(rep => rep.name === currentReport);
+        if (match && match.has_pdf) {
+          clearInterval(poller);
+          btn.textContent = 'DOWNLOAD PDF';
+          btn.onclick = () => window.open(`/api/report/${currentReport}/download/pdf`);
+          loadReports();
+        }
+      } catch(e) { clearInterval(poller); }
+    }, 2000);
+  } catch(e) {
+    btn.textContent = 'ERROR';
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  document.getElementById('modal-gen-btn').textContent = 'GEN PDF';
+  document.getElementById('modal-gen-btn').onclick = generateReport;
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+pollStatus();
+setInterval(pollStatus, 30000);
+connectHealthWS();
+loadInterfaces();
+</script>
+</body>
+</html>

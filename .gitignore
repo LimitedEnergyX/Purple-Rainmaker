@@ -1,0 +1,9 @@
+# Purple Rainmaker — never commit these
+config.py
+config.sh
+playbook/reports/
+*.pdf
+*.log
+__pycache__/
+*.pyc
+.env
