@@ -62,7 +62,7 @@ Not tested on macOS or Windows. `arp-scan` is Linux-only. Pull requests for othe
 ## Install
 
 ```bash
-git clone https://github.com/scovey/purplerainmaker
+git clone https://github.com/LimitedEnergyX/Purple-Rainmaker
 cd purplerainmaker
 bash install.sh
 ```
